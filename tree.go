@@ -6,19 +6,18 @@ import (
 )
 
 type Tree struct {
+	root node
 	// map containing leafs and their indexes
-	// root node
 	// json encode/decode
-	root Node
 }
 
 func NewTree(leaves []string, hashFn func([]byte) []byte) Tree {
-	nodes := make([]*Node, len(leaves))
+	nodes := make([]*node, len(leaves))
 	for i, h := range leaves {
-		nodes[i] = &Node{
-			Left:  nil,
-			Right: nil,
-			Hash:  h,
+		nodes[i] = &node{
+			left:  nil,
+			right: nil,
+			hash:  h,
 		}
 	}
 
@@ -26,7 +25,7 @@ func NewTree(leaves []string, hashFn func([]byte) []byte) Tree {
 		l := len(nodes)
 		for i := range l / 2 {
 			left, right := nodes[2*i], nodes[2*i+1]
-			nodes[i] = NewNode(left, right, hashFn)
+			nodes[i] = newNode(left, right, hashFn)
 		}
 		if l%2 == 1 {
 			nodes[l/2] = nodes[l-1]
@@ -41,29 +40,29 @@ func NewTree(leaves []string, hashFn func([]byte) []byte) Tree {
 
 func (t *Tree) String() string {
 	b := &strings.Builder{}
-	t.root.BuildString(0, []bool{}, false, b)
+	t.root.buildString(0, []bool{}, false, b)
 	return b.String()
 }
 
 func (t *Tree) Prove(hash string) []string {
-	return t.root.Prove(hash)
+	return t.root.prove(hash)
 }
 
-type Node struct {
-	Left  *Node
-	Right *Node
-	Hash  string
+type node struct {
+	left  *node
+	right *node
+	hash  string
 }
 
-func NewNode(left *Node, right *Node, hashFn func([]byte) []byte) *Node {
-	return &Node{
-		Left:  left,
-		Right: right,
-		Hash:  string(hashFn(append([]byte(left.Hash), []byte(right.Hash)...))),
+func newNode(left *node, right *node, hashFn func([]byte) []byte) *node {
+	return &node{
+		left:  left,
+		right: right,
+		hash:  string(hashFn(append([]byte(left.hash), []byte(right.hash)...))),
 	}
 }
 
-func (n *Node) BuildString(depth int, lines []bool, leftNode bool, builder *strings.Builder) {
+func (n *node) buildString(depth int, lines []bool, leftNode bool, builder *strings.Builder) {
 	for i := range depth {
 		if lines[i] {
 			builder.WriteString("│  ")
@@ -80,37 +79,37 @@ func (n *Node) BuildString(depth int, lines []bool, leftNode bool, builder *stri
 		builder.WriteString("└─ ")
 	}
 
-	builder.WriteString(hex.EncodeToString([]byte(n.Hash)))
+	builder.WriteString(hex.EncodeToString([]byte(n.hash)))
 	builder.WriteByte('\n')
 
-	if n.IsLeaf() {
+	if n.isLeaf() {
 		return
 	}
 
 	lines = append(lines, leftNode)
 
-	n.Left.BuildString(depth+1, lines, true, builder)
-	n.Right.BuildString(depth+1, lines, false, builder)
+	n.left.buildString(depth+1, lines, true, builder)
+	n.right.buildString(depth+1, lines, false, builder)
 }
 
-func (n *Node) IsLeaf() bool {
-	return n.Left == nil || n.Right == nil
+func (n *node) isLeaf() bool {
+	return n.left == nil || n.right == nil
 }
 
-func (n *Node) Prove(hash string) []string {
-	if n.IsLeaf() {
-		if n.Hash == hash {
+func (n *node) prove(hash string) []string {
+	if n.isLeaf() {
+		if n.hash == hash {
 			return []string{hash}
 		}
 		return nil
 	}
 
-	if p := n.Left.Prove(hash); p != nil {
-		return append(p, n.Right.Hash)
+	if p := n.left.prove(hash); p != nil {
+		return append(p, n.right.hash)
 	}
 
-	if p := n.Right.Prove(hash); p != nil {
-		return append(p, n.Left.Hash)
+	if p := n.right.prove(hash); p != nil {
+		return append(p, n.left.hash)
 	}
 
 	return nil
