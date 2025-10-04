@@ -2,18 +2,37 @@ package merkle
 
 import (
 	"encoding/hex"
+	"errors"
 	"strings"
 )
 
+var (
+	ErrLeafNotFound = errors.New("leaf not found in merkle tree")
+)
+
+type Proof struct {
+	path      []string
+	leafCount int
+	leafIndex int
+}
+
+func (p *Proof) Path() []string {
+	path := make([]string, len(p.path))
+	copy(path, p.path)
+	return path
+}
+
 type Tree struct {
-	root node
-	// map containing leafs and their indexes
+	node   node
+	leaves map[string]int
 	// json encode/decode
 }
 
 func NewTree(leaves []string, hashFn func([]byte) []byte) Tree {
+	leafMap := make(map[string]int, len(leaves))
 	nodes := make([]*node, len(leaves))
 	for i, h := range leaves {
+		leafMap[h] = i
 		nodes[i] = &node{
 			left:  nil,
 			right: nil,
@@ -28,24 +47,37 @@ func NewTree(leaves []string, hashFn func([]byte) []byte) Tree {
 			nodes[i] = newNode(left, right, hashFn)
 		}
 		if l%2 == 1 {
-			nodes[l/2] = nodes[l-1]
+			nodes[l/2] = newNode(nodes[l-1], nodes[l-1], hashFn)
 		}
 		nodes = nodes[:(l/2 + l%2)]
 	}
 
 	return Tree{
-		root: *nodes[0],
+		node:   *nodes[0],
+		leaves: leafMap,
 	}
+}
+
+func (t *Tree) Root() []byte {
+	return []byte(t.node.hash)
 }
 
 func (t *Tree) String() string {
 	b := &strings.Builder{}
-	t.root.buildString(0, []bool{}, false, b)
+	t.node.buildString(0, []bool{}, false, b)
 	return b.String()
 }
 
-func (t *Tree) Prove(hash string) []string {
-	return t.root.prove(hash)
+func (t *Tree) Prove(leaf string) (Proof, error) {
+	i, ok := t.leaves[leaf]
+	if !ok {
+		return Proof{}, ErrLeafNotFound
+	}
+	return Proof{
+		path:      t.node.prove(leaf),
+		leafIndex: i,
+		leafCount: len(t.leaves),
+	}, nil
 }
 
 type node struct {

@@ -22,11 +22,14 @@ func TestProve(t *testing.T) {
 	// ├─ ab
 	// │  ├─ a
 	// │  └─ b
-	// └─ c
+	// └─ cc
+	//    ├─ c
+	//    └─ c
 
 	tree := merkle.NewTree([]string{"a", "b", "c"}, func(b []byte) []byte {
 		return b
 	})
+	t.Log(tree.String())
 
 	tests := []struct {
 		Target   string
@@ -34,22 +37,25 @@ func TestProve(t *testing.T) {
 	}{
 		{
 			Target:   "a",
-			Expected: []string{"a", "b", "c"},
+			Expected: []string{"a", "b", "cc"},
 		},
 		{
 			Target:   "b",
-			Expected: []string{"b", "a", "c"},
+			Expected: []string{"b", "a", "cc"},
 		},
 		{
 			Target:   "c",
-			Expected: []string{"c", "ab"},
+			Expected: []string{"c", "c", "ab"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.Target, func(t *testing.T) {
-			p := tree.Prove(tt.Target)
-			if !slices.Equal(p, tt.Expected) {
+			p, err := tree.Prove(tt.Target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(p.Path(), tt.Expected) {
 				t.Fatalf("got %v; expected %v", p, tt.Expected)
 			}
 		})
