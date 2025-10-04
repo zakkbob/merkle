@@ -12,8 +12,33 @@ var (
 
 type Proof struct {
 	path      []string
-	leafCount int
+	treeDepth int
 	leafIndex int
+}
+
+func (p *Proof) Verify(root string, leaf string, hashFn func([]byte) []byte) bool {
+	if p.path[0] != leaf {
+		return false
+	}
+
+	hash := []byte(p.path[0])
+	direction := p.leafIndex
+
+	for i := 1; i < len(p.path); i++ {
+		leftNode := (direction & 1) == 0
+		direction >>= 1
+
+		if leftNode {
+			b := append(hash, p.path[i]...)
+			hash = hashFn(b)
+		} else {
+			b := append([]byte(p.path[i]), hash...)
+			hash = hashFn(b)
+		}
+
+	}
+
+	return string(hash) == root
 }
 
 func (p *Proof) Path() []string {
@@ -23,6 +48,7 @@ func (p *Proof) Path() []string {
 }
 
 type Tree struct {
+	depth  int
 	node   node
 	leaves map[string]int
 	// json encode/decode
@@ -40,6 +66,7 @@ func NewTree(leaves []string, hashFn func([]byte) []byte) Tree {
 		}
 	}
 
+	depth := 0
 	for len(nodes) != 1 {
 		l := len(nodes)
 		for i := range l / 2 {
@@ -50,11 +77,13 @@ func NewTree(leaves []string, hashFn func([]byte) []byte) Tree {
 			nodes[l/2] = newNode(nodes[l-1], nodes[l-1], hashFn)
 		}
 		nodes = nodes[:(l/2 + l%2)]
+		depth++
 	}
 
 	return Tree{
 		node:   *nodes[0],
 		leaves: leafMap,
+		depth:  depth,
 	}
 }
 
@@ -76,7 +105,7 @@ func (t *Tree) Prove(leaf string) (Proof, error) {
 	return Proof{
 		path:      t.node.prove(leaf),
 		leafIndex: i,
-		leafCount: len(t.leaves),
+		treeDepth: t.depth,
 	}, nil
 }
 

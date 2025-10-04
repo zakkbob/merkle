@@ -3,13 +3,18 @@ package merkle_test
 import (
 	"crypto/sha256"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/zakkbob/merkle"
 )
 
 func TestNewTree(t *testing.T) {
-	tree := merkle.NewTree([]string{"a", "b", "c", "d", "e", "f"}, func(data []byte) []byte {
+	leaves := []string{}
+	for i := range 100 {
+		leaves = append(leaves, strconv.Itoa(i))
+	}
+	tree := merkle.NewTree(leaves, func(data []byte) []byte {
 		b := sha256.Sum256(data)
 		return b[:]
 	})
@@ -18,17 +23,18 @@ func TestNewTree(t *testing.T) {
 }
 
 func TestProve(t *testing.T) {
-	// abc
+	// abcc
 	// ├─ ab
 	// │  ├─ a
 	// │  └─ b
 	// └─ cc
 	//    ├─ c
 	//    └─ c
-
-	tree := merkle.NewTree([]string{"a", "b", "c"}, func(b []byte) []byte {
+	hashFn := func(b []byte) []byte {
 		return b
-	})
+	}
+
+	tree := merkle.NewTree([]string{"a", "b", "c"}, hashFn)
 	t.Log(tree.String())
 
 	tests := []struct {
@@ -58,6 +64,7 @@ func TestProve(t *testing.T) {
 			if !slices.Equal(p.Path(), tt.Expected) {
 				t.Fatalf("got %v; expected %v", p, tt.Expected)
 			}
+			t.Log(p.Verify("abcc", tt.Target, hashFn))
 		})
 	}
 
