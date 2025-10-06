@@ -2,6 +2,7 @@ package merkle_test
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"slices"
 	"strconv"
 	"testing"
@@ -61,10 +62,22 @@ func TestProve(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !slices.Equal(p.Path(), tt.Expected) {
-				t.Fatalf("got %v; expected %v", p, tt.Expected)
+
+			b, err := p.MarshalJSON()
+			if err != nil {
+				t.Fatal(err)
 			}
-			t.Log(p.Verify("abcc", tt.Target, hashFn))
+
+			var dp merkle.Proof
+			err = json.Unmarshal(b, &dp)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !slices.Equal(dp.Path(), tt.Expected) {
+				t.Fatalf("got %v; expected %v", dp, tt.Expected)
+			}
+			t.Log(dp.Verify("abcc", tt.Target, hashFn))
 		})
 	}
 

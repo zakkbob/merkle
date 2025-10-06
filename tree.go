@@ -2,6 +2,7 @@ package merkle
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
 )
@@ -14,6 +15,38 @@ type Proof struct {
 	path      []string
 	treeDepth int
 	leafIndex int
+}
+
+func (p *Proof) MarshalJSON() ([]byte, error) {
+	v := struct {
+		Path      []string `json:"path"`
+		TreeDepth int      `json:"tree_depth"`
+		LeafIndex int      `json:"leaf_index"`
+	}{
+		Path:      p.path,
+		TreeDepth: p.treeDepth,
+		LeafIndex: p.leafIndex,
+	}
+
+	return json.Marshal(v)
+}
+
+func (p *Proof) UnmarshalJSON(data []byte) error {
+	v := struct {
+		Path      []string `json:"path"`
+		TreeDepth int      `json:"tree_depth"`
+		LeafIndex int      `json:"leaf_index"`
+	}{}
+
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+
+	p.path = v.Path
+	p.treeDepth = v.TreeDepth
+	p.leafIndex = v.LeafIndex
+	return nil
 }
 
 func (p *Proof) Verify(root string, leaf string, hashFn func([]byte) []byte) bool {
