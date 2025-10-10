@@ -1,2 +1,3 @@
-# merkle-tree
-Merkle tree implementation in go
+# Merkle
+Binary merkle tree implmentation in go
+(maybe more soon?)
