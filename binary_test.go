@@ -10,12 +10,12 @@ import (
 	"github.com/zakkbob/merkle"
 )
 
-func TestNewTree(t *testing.T) {
+func TestNewBinaryTree(t *testing.T) {
 	leaves := []string{}
 	for i := range 100 {
 		leaves = append(leaves, strconv.Itoa(i))
 	}
-	tree := merkle.NewTree(leaves, func(data []byte) []byte {
+	tree := merkle.NewBinaryTree(leaves, func(data []byte) []byte {
 		b := sha256.Sum256(data)
 		return b[:]
 	})
@@ -23,7 +23,7 @@ func TestNewTree(t *testing.T) {
 	t.Log("\n" + tree.String())
 }
 
-func TestProve(t *testing.T) {
+func TestBinaryTreeProof(t *testing.T) {
 	// abcc
 	// ├─ ab
 	// │  ├─ a
@@ -35,7 +35,7 @@ func TestProve(t *testing.T) {
 		return b
 	}
 
-	tree := merkle.NewTree([]string{"a", "b", "c"}, hashFn)
+	tree := merkle.NewBinaryTree([]string{"a", "b", "c"}, hashFn)
 	t.Log(tree.String())
 
 	tests := []struct {
