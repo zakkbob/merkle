@@ -2,12 +2,7 @@ package merkle
 
 import (
 	"encoding/hex"
-	"errors"
 	"strings"
-)
-
-var (
-	ErrLeafNotFound = errors.New("leaf not found in merkle tree")
 )
 
 type BinaryTree struct {
