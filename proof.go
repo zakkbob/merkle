@@ -1,22 +1,25 @@
 package merkle
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"slices"
+)
 
 type Proof struct {
-	path      []string
-	treeDepth int
-	leafIndex int
+	Path      [][]byte
+	TreeDepth int
+	LeafIndex int
 }
 
 func (p *Proof) MarshalJSON() ([]byte, error) {
 	v := struct {
-		Path      []string `json:"path"`
+		Path      [][]byte `json:"path"`
 		TreeDepth int      `json:"tree_depth"`
 		LeafIndex int      `json:"leaf_index"`
 	}{
-		Path:      p.path,
-		TreeDepth: p.treeDepth,
-		LeafIndex: p.leafIndex,
+		Path:      p.Path,
+		TreeDepth: p.TreeDepth,
+		LeafIndex: p.LeafIndex,
 	}
 
 	return json.Marshal(v)
@@ -24,7 +27,7 @@ func (p *Proof) MarshalJSON() ([]byte, error) {
 
 func (p *Proof) UnmarshalJSON(data []byte) error {
 	v := struct {
-		Path      []string `json:"path"`
+		Path      [][]byte `json:"path"`
 		TreeDepth int      `json:"tree_depth"`
 		LeafIndex int      `json:"leaf_index"`
 	}{}
@@ -34,39 +37,33 @@ func (p *Proof) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	p.path = v.Path
-	p.treeDepth = v.TreeDepth
-	p.leafIndex = v.LeafIndex
+	p.Path = v.Path
+	p.TreeDepth = v.TreeDepth
+	p.LeafIndex = v.LeafIndex
 	return nil
 }
 
-func (p *Proof) Verify(root string, leaf string, hashFn func([]byte) []byte) bool {
-	if p.path[0] != leaf {
+func (p *Proof) Verify(root []byte, leaf []byte, hashFn func([]byte) []byte) bool {
+	if !slices.Equal(p.Path[0], leaf) {
 		return false
 	}
 
-	hash := []byte(p.path[0])
-	direction := p.leafIndex
+	hash := p.Path[0]
+	direction := p.LeafIndex
 
-	for i := 1; i < len(p.path); i++ {
+	for i := 1; i < len(p.Path); i++ {
 		leftNode := (direction & 1) == 0
 		direction >>= 1
 
 		if leftNode {
-			b := append(hash, p.path[i]...)
+			b := append(hash, p.Path[i]...)
 			hash = hashFn(b)
 		} else {
-			b := append([]byte(p.path[i]), hash...)
+			b := append([]byte(p.Path[i]), hash...)
 			hash = hashFn(b)
 		}
 
 	}
 
-	return string(hash) == root
-}
-
-func (p *Proof) Path() []string {
-	path := make([]string, len(p.path))
-	copy(path, p.path)
-	return path
+	return slices.Equal(hash, root)
 }

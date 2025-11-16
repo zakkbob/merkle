@@ -4,16 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"slices"
-	"strconv"
 	"testing"
 
 	"github.com/zakkbob/merkle"
 )
 
 func TestNewBinaryTree(t *testing.T) {
-	leaves := []string{}
+	leaves := [][]byte{}
 	for i := range 100 {
-		leaves = append(leaves, strconv.Itoa(i))
+		leaves = append(leaves, []byte{byte(i)})
 	}
 	tree := merkle.NewBinaryTree(leaves, func(data []byte) []byte {
 		b := sha256.Sum256(data)
@@ -35,29 +34,29 @@ func TestBinaryTreeProof(t *testing.T) {
 		return b
 	}
 
-	tree := merkle.NewBinaryTree([]string{"a", "b", "c"}, hashFn)
+	tree := merkle.NewBinaryTree([][]byte{[]byte("a"), []byte("b"), []byte("c")}, hashFn)
 	t.Log(tree.String())
 
 	tests := []struct {
-		Target   string
-		Expected []string
+		Target   []byte
+		Expected [][]byte
 	}{
 		{
-			Target:   "a",
-			Expected: []string{"a", "b", "cc"},
+			Target:   []byte("a"),
+			Expected: [][]byte{[]byte("a"), []byte("b"), []byte("cc")},
 		},
 		{
-			Target:   "b",
-			Expected: []string{"b", "a", "cc"},
+			Target:   []byte("b"),
+			Expected: [][]byte{[]byte("b"), []byte("a"), []byte("cc")},
 		},
 		{
-			Target:   "c",
-			Expected: []string{"c", "c", "ab"},
+			Target:   []byte("c"),
+			Expected: [][]byte{[]byte("c"), []byte("c"), []byte("ab")},
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.Target, func(t *testing.T) {
+		t.Run(string(tt.Target), func(t *testing.T) {
 			p, err := tree.Prove(tt.Target)
 			if err != nil {
 				t.Fatal(err)
@@ -74,10 +73,17 @@ func TestBinaryTreeProof(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !slices.Equal(dp.Path(), tt.Expected) {
-				t.Fatalf("got %v; expected %v", dp, tt.Expected)
+			if len(dp.Path) != len(tt.Expected) {
+				t.Fatalf("got %v; expected %v", dp.Path, tt.Expected)
 			}
-			t.Log(dp.Verify("abcc", tt.Target, hashFn))
+
+			for i := range len(dp.Path) {
+				if !slices.Equal(dp.Path[i], tt.Expected[i]) {
+					t.Fatalf("got %v; expected %v", dp.Path, tt.Expected)
+				}
+			}
+
+			t.Log(dp.Verify([]byte("abcc"), tt.Target, hashFn))
 		})
 	}
 

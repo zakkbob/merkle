@@ -2,6 +2,7 @@ package merkle
 
 import (
 	"encoding/hex"
+	"slices"
 	"strings"
 )
 
@@ -12,15 +13,15 @@ type BinaryTree struct {
 	// json encode/decode
 }
 
-func NewBinaryTree(leaves []string, hashFn func([]byte) []byte) BinaryTree {
-	leafMap := make(map[string]int, len(leaves))
-	nodes := make([]*node, len(leaves))
-	for i, h := range leaves {
-		leafMap[h] = i
+func NewBinaryTree(bs [][]byte, hashFn func([]byte) []byte) BinaryTree {
+	leafMap := make(map[string]int, len(bs))
+	nodes := make([]*node, len(bs))
+	for i, b := range bs {
+		leafMap[string(b)] = i
 		nodes[i] = &node{
 			left:  nil,
 			right: nil,
-			hash:  h,
+			hash:  b,
 		}
 	}
 
@@ -55,29 +56,29 @@ func (t *BinaryTree) String() string {
 	return b.String()
 }
 
-func (t *BinaryTree) Prove(leaf string) (Proof, error) {
-	i, ok := t.leaves[leaf]
+func (t *BinaryTree) Prove(b []byte) (Proof, error) {
+	i, ok := t.leaves[string(b)]
 	if !ok {
 		return Proof{}, ErrLeafNotFound
 	}
 	return Proof{
-		path:      t.node.prove(leaf),
-		leafIndex: i,
-		treeDepth: t.depth,
+		Path:      t.node.prove(b),
+		LeafIndex: i,
+		TreeDepth: t.depth,
 	}, nil
 }
 
 type node struct {
 	left  *node
 	right *node
-	hash  string
+	hash  []byte
 }
 
 func newNode(left *node, right *node, hashFn func([]byte) []byte) *node {
 	return &node{
 		left:  left,
 		right: right,
-		hash:  string(hashFn(append([]byte(left.hash), []byte(right.hash)...))),
+		hash:  hashFn(append(left.hash, right.hash...)),
 	}
 }
 
@@ -115,19 +116,19 @@ func (n *node) isLeaf() bool {
 	return n.left == nil || n.right == nil
 }
 
-func (n *node) prove(hash string) []string {
+func (n *node) prove(b []byte) [][]byte {
 	if n.isLeaf() {
-		if n.hash == hash {
-			return []string{hash}
+		if slices.Equal(n.hash, b) {
+			return [][]byte{b}
 		}
 		return nil
 	}
 
-	if p := n.left.prove(hash); p != nil {
+	if p := n.left.prove(b); p != nil {
 		return append(p, n.right.hash)
 	}
 
-	if p := n.right.prove(hash); p != nil {
+	if p := n.right.prove(b); p != nil {
 		return append(p, n.left.hash)
 	}
 
