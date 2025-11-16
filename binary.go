@@ -13,6 +13,8 @@ type BinaryTree struct {
 	// json encode/decode
 }
 
+// Constructs a binary merkle tree from the provided data, using the provided hash function.
+// If the number of elements provided is not a power of 2, the tree is padded by duplicating the last node.
 func NewBinaryTree(bs [][]byte, hashFn func([]byte) []byte) BinaryTree {
 	leafMap := make(map[string]int, len(bs))
 	nodes := make([]*node, len(bs))
@@ -21,7 +23,7 @@ func NewBinaryTree(bs [][]byte, hashFn func([]byte) []byte) BinaryTree {
 		nodes[i] = &node{
 			left:  nil,
 			right: nil,
-			hash:  b,
+			hash:  hashFn(b),
 		}
 	}
 
